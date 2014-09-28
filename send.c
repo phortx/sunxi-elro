@@ -1,166 +1,194 @@
-##### benötigt gpio_lib.h
-##### von    --->>    https://github.com/youyudehexie/node-cubieboard-gpio/blob/master/lib/gpio_lib.h
-##### Aufruf send Steckdosennr Zustand
-##### z.B. send 1 1		Schaltet Steckdose 1 Ein
-
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <string>
+#include <unistd.h>
 
 #include "gpio_lib.h"
-#define PB2   SUNXI_GPB(2)
-#define PBI3    SUNXI_GPB(3)
-#define PB16 	 SUNXI_GPB(16)
-#define PC20	SUNXI_GPC(20)
-#define PD3    SUNXI_GPD(3)
+
+int long_signal  = 1025;
+int short_signal = 375;
+int pin;
+char* systemCode;
+int unitCode;
+int command;
 
 
-#define MISO    SUNXI_GPE(3)
-#define MOSI    SUNXI_GPE(2)
-#define SCK     SUNXI_GPE(1)
-#define CS      SUNXI_GPE(0)
+int get_pin(char* pin_arg)
+{
+    std::string pin_str(pin_arg);
+    // TODO convert to uppercase
+    char pin_char = pin_arg[0];
+    int pin_number = atoi(pin_str.substr(1).c_str());
 
+    if (pin_char == 'P')
+    {
+        pin_char = pin_arg[1];
+        pin_number = atoi(pin_str.substr(2).c_str());
+    }
 
-int lang = 1025;  // 3 einzel pulse
-int kurz = 375; // ein puls
+    switch (pin_char) {
+        case 'A':
+            return SUNXI_GPA(pin_number);
 
-int PIN = PB2;      // Verwendeter Ausgangs PIN
+        case 'B':
+            return SUNXI_GPB(pin_number);
+
+        case 'C':
+            return SUNXI_GPC(pin_number);
+
+        case 'D':
+            return SUNXI_GPD(pin_number);
+
+        case 'E':
+            return SUNXI_GPE(pin_number);
+
+        case 'F':
+            return SUNXI_GPF(pin_number);
+
+        case 'G':
+            return SUNXI_GPG(pin_number);
+
+        case 'H':
+            return SUNXI_GPH(pin_number);
+
+        case 'I':
+            return SUNXI_GPI(pin_number);
+    }
+}
 
 
 void set_output()
 {
-sunxi_gpio_set_cfgpin(PIN,OUTPUT);
+    sunxi_gpio_set_cfgpin(pin, OUTPUT);
 }
 
-        void switch1() //
-        {
-        	// BIT 1
-         sunxi_gpio_output(PIN,HIGH);
-        usleep(lang);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(kurz);
-        sunxi_gpio_output(PIN,HIGH);
-        usleep(lang);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(kurz);
-        return;
-     }
+void sequence_up()
+{
+    sunxi_gpio_output(pin, HIGH);
+    usleep(short_signal);
+    sunxi_gpio_output(pin, LOW);
+    usleep(long_signal);
+    sunxi_gpio_output(pin, HIGH);
+    usleep(short_signal);
+    sunxi_gpio_output(pin, LOW);
+    usleep(long_signal);
+    return;
+}
 
-       void switch0() //
-       {
+void sequence_down()
+{
+    sunxi_gpio_output(pin, HIGH);
+    usleep(short_signal);
+    sunxi_gpio_output(pin, LOW);
+    usleep(long_signal);
+    sunxi_gpio_output(pin, HIGH);
+    usleep(long_signal);
+    sunxi_gpio_output(pin, LOW);
+    usleep(short_signal);
+    return;
+}
 
-        //switch0
- 		// BIT 0
-        sunxi_gpio_output(PIN,HIGH);
-        usleep(kurz);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(lang);
-        sunxi_gpio_output(PIN,HIGH);
-        usleep(kurz);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(lang);
-        return;
-        //Bit 0
-     }
+void sync_sequence()
+{
+    sunxi_gpio_output(pin, HIGH);
+    usleep(short_signal);
+    sunxi_gpio_output(pin, LOW);
+    usleep(11625);
+}
 
-        void switchF() //1hi, 3lo - - 3hi, 1lo
-      {
-    //Bit F
-		  sunxi_gpio_output(PIN,HIGH);
-        usleep(kurz);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(lang);
-        sunxi_gpio_output(PIN,HIGH);
-        usleep(lang);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(kurz);
-        return;
-       //Bit F
-    }
-		void sync_send()
-		{
-			sunxi_gpio_output(PIN,HIGH);
-        usleep(kurz);
-        sunxi_gpio_output(PIN,LOW);
-        usleep(11625);
 
-			}
 
 int main(int argc, char *argv[])
 {
-    if(SETUP_OK!=sunxi_gpio_init()){
-        printf("Fehler bei initialisierung!\n");
-return -1;
+    if (SETUP_OK != sunxi_gpio_init())
+    {
+        printf("Error while initializing the gpio!\n");
+        return -1;
+    }
 
-}
+    pin = get_pin(argv[1]);
+    systemCode = argv[2];
+    unitCode = atoi(argv[3]);
+    command  = atoi(argv[4]);
 
- //char* systemCode = argv[1];
-  int unitCode = atoi(argv[1]);
-  int command  = atoi(argv[2]);
-set_output();
+    set_output();
 
+    int i, j;
 
-int i, j;
+    for(i = 0; i < 10; i++) {
+        sync_sequence();
 
-for(i=0; i<10; i++) {
-	sync_send();
-	switch0(); //1 Hauscode au Standart alle DIP s up
-	switch0(); //2
-	switch0(); //3
-	switch0(); //4
-	switch0(); //5 Hauscode;
+        for(char* c = systemCode; *c; ++c)
+        {
+            if (*c == '1')
+            {
+                sequence_up();
+            }
+            else
+            {
+                sequence_down();
+            }
+        }
 
-	switch (unitCode)
-	 {
-	case 1:
-	switch0(); //A Steckdosennr; 1  DIP 1 UP
-	switchF(); //B
-	switchF(); //C
-	switchF(); //D
-	switchF(); //E
-	break;
-	case 2:
-	switchF(); //A Steckdosennr;2 DIP 2 up
-	switch0(); //B
-	switchF(); //C
-	switchF(); //D
-	switchF(); //E
-	break;
+        switch (unitCode)
+        {
+            case 1:
+                sequence_up();
+                sequence_down();
+                sequence_down();
+                sequence_down();
+                sequence_down();
+                break;
+            case 2:
+                sequence_down();
+                sequence_up();
+                sequence_down();
+                sequence_down();
+                sequence_down();
+                break;
 
-	case 3:
-	switchF(); //A Steckdosennr; 3 DIP 3 UP
-	switchF(); //B
-	switch0(); //C
-	switchF(); //D
-	switchF(); //E
-	break;
+            case 3:
+                sequence_down();
+                sequence_down();
+                sequence_up();
+                sequence_down();
+                sequence_down();
+                break;
 
-	default:
-	printf("Nummer der Steckdose Wählen");
-}
+            case 4:
+                sequence_down();
+                sequence_down();
+                sequence_down();
+                sequence_up();
+                sequence_down();
+                break;
 
-switch (command)
-{
-	case 1:
-	switchF();
-	switchF();
-	break;
+            case 5:
+                sequence_down();
+                sequence_down();
+                sequence_down();
+                sequence_down();
+                sequence_up();
+                break;
+        }
 
-	case 0:
-	switchF();
-	switch0();
-	break;
+        switch (command)
+        {
+            case 1:
+                sequence_down();
+                sequence_down();
+                break;
 
-	default:
-	//printf("unsupported command\n ");
-     return -1;
-}
+            case 0:
+                sequence_down();
+                sequence_up();
+                break;
+        }
 
-	}
+    }
 
     void sunxi_gpio_cleanup();
 
     return 0;
-
-
-
 }
