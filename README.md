@@ -1,36 +1,35 @@
-Elrosend-CT
+sunxi-elro
 ===========
 
-Elro Funksteckdosen am Cubietruck | getestet nur mit Elro AB440
+This is a fork of [Elrosend-CT from klagges](https://github.com/klagges/Elrosend-CT) to provide additional features, english documentation and improved code formatting.
 
-Da es auf dem Cubietruck keine alternative zu RCSwitch/WiringPI gab war es wesentlich schwieriger Funksteckdosen anzusprechen.
+sunxi-elro provides a way to switch Elro Remote Sockets on the Cubietruck or other Sunxi based boards.
 
-Ich habe das nun in einem kleinen soweit funktionsfähigem Programm getan.
-
-benötigt
-https://github.com/youyudehexie/node-cubieboard-gpio/blob/master/lib/gpio_lib.h
-
-send.c anpassen falls ein anderer PIN als der PB2 verwendet werden soll.
+It requires the (gpio_lib.h)[https://github.com/youyudehexie/node-cubieboard-gpio/blob/master/lib/gpio_lib.h]
 
 
-Compile
-===================
+## Compile
+
 gcc gpio_lib.h -c
 gcc send.c -c
 gcc gpio_lib.o send.o -o send
 
-ausführen mit ./send 1 1      
 
-                      1 erste Steckdose DIP A 1 rest 0
-                      1 Ein
-                      
-./send 2 0
-          
-          2 zweite Steckdose DIP B up rest 0
-          0 Aus
-          
-          
-Hauscode Hardcoded in Send.c  Standart Hauscode DIP 1 - 5  1
+## Usage
 
+```bash
+./send gpio_port code socket state
+```
 
+Where ...
 
+- `gpio_port` is the GPIO Port in Uppercase like `PB2` or `PC21`
+- `code` is the home code of the socket like `10100`
+- `socket` is the number of the socket: `1` is `A`, `2` is `B` and so on
+- `state` is the state to switch in: `1` for on, `0` for off
+
+Example: 
+
+```bash
+./send PC21 10100 2 1
+```
