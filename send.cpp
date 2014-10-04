@@ -4,7 +4,9 @@
 #include <string>
 #include <unistd.h>
 
+extern "C" {
 #include "gpio_lib.h"
+}
 
 int long_signal  = 1025;
 int short_signal = 375;
